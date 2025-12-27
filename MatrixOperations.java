@@ -72,7 +72,22 @@ public class MatrixOperations {
     public static Matrix squareDistance(Matrix m) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-
+        if (m == null)
+            throw new IllegalArgumentException("Matrix can't be null");
+        int dim = m.getNumRows();
+        Matrix ones = new FlatMatrix(dim, dim);
+        for (int i =0; i < dim; i++) {
+            for (int j = 0; j < dim; j++) {
+                ones.set(i, j, 1.0);
+            }
+        }
+        Matrix fT = m.transpose(); // fT is the transpose of m
+        Matrix mult = multiply(m, fT); // mult is the product of m times fT
+        Matrix diag = diagonal(mult); // diag is the diagonal of mult (where all the values are '0' other than the diagonal)
+        Matrix firstTerm = multiply(ones, diag);
+        Matrix secondTerm = multiply(diag, ones);
+        Matrix thirdTerm = add(mult, mult);
+        ans = sub(add(firstTerm, secondTerm), thirdTerm);
         // ---------------write your code ABOVE this line only! ------------------
         return ans;
     }
@@ -84,7 +99,18 @@ public class MatrixOperations {
     public static Matrix multiply(Matrix mat1, Matrix mat2) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-
+        MatrixUtils.roundMatrix(mat1);
+        MatrixUtils.roundMatrix(mat2);
+        ans = new FlatMatrix(mat1.getNumRows(), mat2.getNumCols());
+        for (int i = 0; i < ans.getNumRows(); i++) {
+            for (int j = 0; j < ans.getNumCols(); j++) {
+                for (int k = 0; k < mat1.getNumCols(); k++) {
+                    double mult = mat1.get(i, k) * mat2.get(k, j);
+                    ans.set(i, j, ans.get(i, j) + mult);
+                }
+            }
+        }
+        MatrixUtils.roundMatrix(ans);
         // ---------------write your code ABOVE this line only! ------------------
         return ans;
     }
@@ -114,6 +140,8 @@ public class MatrixOperations {
         // ---------------write your code BELOW this line only! ------------------
         if((m1 == null) || (m2 == null) || (m1.getNumRows() != m2.getNumRows()) || (m1.getNumCols() != m2.getNumCols()))
             throw new IllegalArgumentException("Input is invalid");
+        MatrixUtils.roundMatrix(m1);
+        MatrixUtils.roundMatrix(m2);
         ans = new FlatMatrix(m1.getNumRows(), m1.getNumCols());
         for (int i = 0; i < m1.getNumRows(); i++) {
             for (int j = 0; j < m1.getNumCols(); j++) {
@@ -130,7 +158,16 @@ public class MatrixOperations {
     public static Matrix sub(Matrix m1, Matrix m2) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-
+        if((m1 == null) || (m2 == null) || (m1.getNumRows() != m2.getNumRows()) || (m1.getNumCols() != m2.getNumCols()))
+            throw new IllegalArgumentException("Input is invalid");
+        MatrixUtils.roundMatrix(m1);
+        MatrixUtils.roundMatrix(m2);
+        ans = new FlatMatrix(m1.getNumRows(), m1.getNumCols());
+        for (int i = 0; i < m1.getNumRows(); i++) {
+            for (int j = 0; j < m1.getNumCols(); j++) {
+                ans.set(i, j, Math.abs(m1.get(i, j) - m2.get(i, j)));
+            }
+        }
         // ---------------write your code ABOVE this line only! ------------------
         return ans;
     }
@@ -141,7 +178,23 @@ public class MatrixOperations {
     public static int[] selectionSort(int[] array, Comparator<Integer> comp) {
         int[] ans = null;
         // ---------------write your code BELOW this line only! ------------------
-
+        if ((array == null) || (comp == null))
+            throw new IllegalArgumentException("Input is invalid");
+        ans = new int[array.length];
+        for (int i = 0; i < array.length; i++) {
+            ans[i] = array[i];
+        }
+        for (int i = 0; i < ans.length - 1; i++) {
+            int minIndex = i;
+            for (int j = i + 1; j < ans.length; j++) {
+                if (comp.compare(ans[j], ans[minIndex]) < 0) {
+                    minIndex = j;
+                }
+            }
+            int temp = ans[minIndex];
+            ans[minIndex] = ans[i];
+            ans[i] = temp;
+        }
         // ---------------write your code ABOVE this line only! ------------------
         return ans;
     }
