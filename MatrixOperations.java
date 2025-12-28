@@ -28,7 +28,7 @@ public class MatrixOperations {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
         if ((m == null) || (m.getNumRows() == 0))
-            throw new IllegalArgumentException("Matrix can't be null");
+            throw new IllegalArgumentException("Invalid input");
         ans = new FlatMatrix(m.getNumRows(), m.getNumCols());
         for (int j = 0; j < m.getNumCols(); j++) {
             double mean = calMean(m, j); // call for helper function
@@ -39,6 +39,7 @@ public class MatrixOperations {
                     ans.set(i, j, (current - mean) / std);
                 }
         }
+        MatrixUtils.roundMatrix(ans);
         // ---------------write your code ABOVE this line only! ------------------
         return ans;
     }
@@ -99,8 +100,8 @@ public class MatrixOperations {
     public static Matrix multiply(Matrix mat1, Matrix mat2) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-        MatrixUtils.roundMatrix(mat1);
-        MatrixUtils.roundMatrix(mat2);
+        if ((mat1 == null) || (mat2 == null) || (mat1.getNumCols() != mat2.getNumRows()))
+            throw new IllegalArgumentException("Invalid input");
         ans = new FlatMatrix(mat1.getNumRows(), mat2.getNumCols());
         for (int i = 0; i < ans.getNumRows(); i++) {
             for (int j = 0; j < ans.getNumCols(); j++) {
@@ -122,7 +123,7 @@ public class MatrixOperations {
     public static Matrix diagonal(Matrix m) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-        if((m == null) || (!m.isSquare()))
+        if ((m == null) || (!m.isSquare()))
             throw new IllegalArgumentException("Matrix is invalid");
         ans = new FlatMatrix(m.getNumRows(), m.getNumCols());
         for (int i = 0; i < m.getNumRows(); i++) {
@@ -138,7 +139,7 @@ public class MatrixOperations {
     public static Matrix add(Matrix m1, Matrix m2) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-        if((m1 == null) || (m2 == null) || (m1.getNumRows() != m2.getNumRows()) || (m1.getNumCols() != m2.getNumCols()))
+        if ((m1 == null) || (m2 == null) || (m1.getNumRows() != m2.getNumRows()) || (m1.getNumCols() != m2.getNumCols()))
             throw new IllegalArgumentException("Input is invalid");
         MatrixUtils.roundMatrix(m1);
         MatrixUtils.roundMatrix(m2);
@@ -158,7 +159,7 @@ public class MatrixOperations {
     public static Matrix sub(Matrix m1, Matrix m2) {
         Matrix ans = null;
         // ---------------write your code BELOW this line only! ------------------
-        if((m1 == null) || (m2 == null) || (m1.getNumRows() != m2.getNumRows()) || (m1.getNumCols() != m2.getNumCols()))
+        if ((m1 == null) || (m2 == null) || (m1.getNumRows() != m2.getNumRows()) || (m1.getNumCols() != m2.getNumCols()))
             throw new IllegalArgumentException("Input is invalid");
         MatrixUtils.roundMatrix(m1);
         MatrixUtils.roundMatrix(m2);
@@ -206,8 +207,90 @@ public class MatrixOperations {
     public static boolean[] testClasses(Matrix trainingFeatures, boolean[] trainingClasses, Matrix testFeatures, int k) {
         boolean[] ans = null;
         // ---------------write your code BELOW this line only! ------------------
-
+        if ((trainingFeatures == null) || (trainingClasses == null) || (testFeatures == null))
+            throw new IllegalArgumentException("Inputs can't be null");
+        if ((trainingFeatures.getNumCols() != testFeatures.getNumCols()) || (trainingFeatures.getNumRows() != trainingClasses.length))
+            throw new IllegalArgumentException("Input is invalid");
+        if ((k < 1) || (k > trainingFeatures.getNumRows()))
+            throw new IllegalArgumentException("k is invalid");
+        ans = new boolean[testFeatures.getNumRows()];
+        Matrix normTrainFeat = normalize(trainingFeatures);
+        Matrix normTestFeat = normalize(testFeatures, trainingFeatures); // call for helper function
+        Matrix allFeatures = concatenate(normTrainFeat, normTestFeat); // call for helper function
+        Matrix squareDistance = squareDistance(allFeatures);
+        int[] kNearest = new int[k];
+        for (int i = 0; i < normTestFeat.getNumRows(); i++) {
+            IndexComparator testRowComp =  new IndexComparator(squareDistance, i + normTrainFeat.getNumRows());
+            int[] allIndices = indexArray(trainingFeatures.getNumRows());
+            allIndices = selectionSort(allIndices, testRowComp); // sorts the indices in 'allIndices'
+            for (int j = 0; j < k; j++) {
+                kNearest[j] = allIndices[j];
+            }
+            int positive = 0;
+            int negative = 0;
+            for (int j = 0; j < k; j++) {
+                if (trainingClasses[kNearest[j]])
+                    positive++;
+                else
+                    negative++;
+            }
+            ans[i] = positive > negative;
+        }
         // ---------------write your code ABOVE this line only! ------------------
+        return ans;
+    }
+
+    // Helper for task 1.5
+    // Assumes: 'primary' and 'base' not null, both have matching number of columns and have at least one row
+    // Returns: the normalized matrix of the 'primary' matrix
+    public static Matrix normalize(Matrix primary, Matrix base) {
+        Matrix ans = null;
+        // ---------------write your code BELOW this line only! ------------------
+        if ((primary == null) || (base == null) || (primary.getNumRows() == 0) || (base.getNumRows() == 0))
+            throw new IllegalArgumentException("Invalid input");
+        if (primary.getNumCols() != base.getNumCols())
+            throw new IllegalArgumentException("Number of columns doesn't match");
+        ans = new FlatMatrix(primary.getNumRows(), primary.getNumCols());
+        for (int j = 0; j < base.getNumCols(); j++) {
+            double mean = calMean(base, j);
+            double std = calStd(base, j, mean);
+            if (std != 0)
+                for (int i = 0; i < primary.getNumRows(); i++) {
+                    double current = primary.get(i, j);
+                    ans.set(i, j, (current - mean) / std);
+                }
+        }
+        // ---------------write your code ABOVE this line only! ------------------
+        return ans;
+    }
+
+    // Helper for task 1.5
+    // Assumes: 'top' and 'bottom' not null and both have matching number of columns
+    // Returns: the concatenated matrix that has 'top' on the top and 'bottom' at the bottom
+    public static Matrix concatenate(Matrix top, Matrix bottom) {
+        if ((top == null) || (bottom == null) || (top.getNumCols() != bottom.getNumCols()))
+            throw new IllegalArgumentException("Input is invalid");
+        Matrix allFeatures = new FlatMatrix(top.getNumRows() + bottom.getNumRows(), top.getNumCols());
+        for (int j = 0; j < top.getNumCols(); j++) {
+            for (int i = 0; i < top.getNumRows(); i++) {
+                allFeatures.set(i, j, top.get(i, j));
+            }
+        }
+        for (int j = 0; j < bottom.getNumCols(); j++) {
+            for (int i = top.getNumRows(); i < bottom.getNumRows() + top.getNumRows(); i++) {
+                allFeatures.set(i, j, bottom.get(i - top.getNumRows(), j));
+            }
+        }
+        return allFeatures;
+    }
+
+    // Helper for task 1.5
+    // Assumes: n >= 0
+    // Returns: An array with n elements and each element is the same as its index
+    public static int[] indexArray(int n) {
+        int[] ans = new int[n];
+        for (int i = 0; i < n; i++)
+            ans[i] = i;
         return ans;
     }
 
@@ -217,7 +300,12 @@ public class MatrixOperations {
     public static double measureAccuracy(boolean[] testLabels, boolean[] trueLabels) {
         double ans = 0;
         // ---------------write your code BELOW this line only! ------------------
-
+        double sum = 0.0;
+        for (int i = 0; i < testLabels.length; i++) {
+            if (testLabels[i] == trueLabels[i])
+                sum++;
+        }
+        ans = sum / testLabels.length;
         // ---------------write your code ABOVE this line only! ------------------
         return ans;
     }
